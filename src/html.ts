@@ -56,10 +56,11 @@ export const parseHtml = (
     const title = normalizeText($el.find(selectors.title).first().text());
     if (!title) return;
 
-    const rawHref = normalizeText($el.find(selectors.link).first().attr("href") ?? "");
+    const rawHref = $el.find(selectors.link).first().attr("href")?.trim() ?? "";
     if (!rawHref) return;
 
     const url = resolveUrl(rawHref, source.url);
+    if (!url) return;
     const publishedAt = parsePublishedAt($el, selectors.date);
     const summary = selectors.summary
       ? normalizeText($el.find(selectors.summary).first().text()) || null

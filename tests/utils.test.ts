@@ -94,8 +94,36 @@ describe("resolveUrl", () => {
     );
   });
 
-  it("returns href on invalid input", () => {
-    expect(resolveUrl("not a url", "also not a url")).toBe("not a url");
+  it.each([
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    " \tjavascript:alert(1)\r\n",
+    "java\tscript:alert(1)",
+    "java\nscript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "vbscript:msgbox(1)",
+    "file:///etc/passwd",
+    "mailto:person@example.com",
+    "ftp://example.com/file",
+    "https://[invalid",
+    "",
+    "   ",
+  ])("rejects unsafe or invalid href %j", (href) => {
+    expect(resolveUrl(href, "https://example.com")).toBe("");
+  });
+
+  it("returns empty string on invalid input", () => {
+    expect(resolveUrl("not a url", "also not a url")).toBe("");
+  });
+
+  it("accepts HTTP and normalizes whitespace and casing", () => {
+    expect(resolveUrl(" \tHtTp://other.com/page\n", "https://example.com")).toBe(
+      "http://other.com/page",
+    );
+  });
+
+  it("rejects a relative URL resolved against a non-HTTP base", () => {
+    expect(resolveUrl("/story", "file:///news")).toBe("");
   });
 });
 

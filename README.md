@@ -187,7 +187,7 @@ harvester.stop();
 ```typescript
 interface Article {
   sourceId: string;          // matches source config id
-  url: string;               // canonical article URL
+  url: string;               // canonical article URL, always http(s); items with other schemes are skipped
   title: string;
   content: string | null;    // full text (when available)
   summary: string | null;    // short description

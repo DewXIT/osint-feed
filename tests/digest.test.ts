@@ -16,6 +16,15 @@ const makeArticle = (overrides: Partial<Article> = {}): Article => ({
 });
 
 describe("dedup", () => {
+  it.each(["javascript:alert(1)", "data:text/html,unsafe", "file:///tmp/story", "https://[invalid", "/relative"])(
+    "rejects unsafe or non-absolute caller-supplied URLs: %s",
+    (url) => {
+      const articles = [makeArticle({ url }), makeArticle({ title: "Safe story" })];
+      expect(dedup(articles, 0.6)).toHaveLength(1);
+      expect(buildDigest(articles).articles).toHaveLength(1);
+    },
+  );
+
   it("removes duplicate titles", () => {
     const articles = [
       makeArticle({ title: "US deploys 82nd Airborne to Middle East" }),

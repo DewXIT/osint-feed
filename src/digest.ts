@@ -1,5 +1,5 @@
 import type { Article, DigestOptions } from "./types.js";
-import { estimateTokens, jaccardSimilarity, truncate } from "./utils.js";
+import { estimateTokens, hashUrl, jaccardSimilarity, resolveUrl, truncate } from "./utils.js";
 
 const DEFAULT_DIGEST: Required<DigestOptions> = {
   maxTokens: 12_000,
@@ -19,7 +19,10 @@ export const dedup = (
 ): Article[] => {
   const kept: Article[] = [];
 
-  for (const article of articles) {
+  for (const input of articles) {
+    const url = resolveUrl(input.url, input.url);
+    if (!url) continue;
+    const article = url === input.url ? input : { ...input, url, hash: hashUrl(url) };
     const isDuplicate = kept.some(
       (existing) => jaccardSimilarity(existing.title, article.title) >= threshold,
     );

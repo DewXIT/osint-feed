@@ -1,6 +1,6 @@
 import RssParser from "rss-parser";
 import type { Article, HarvesterWarning, RssSourceConfig } from "./types.js";
-import { hashUrl, normalizeText } from "./utils.js";
+import { hashUrl, normalizeText, resolveUrl } from "./utils.js";
 
 const DEFAULT_UA = "osint-feed/0.1 (+https://github.com/osint-feed)";
 
@@ -87,7 +87,7 @@ const feedToArticles = (
   for (const item of feed.items) {
     if (articles.length >= maxItems) break;
 
-    const url = item.link?.trim();
+    const url = resolveUrl(item.link ?? "", source.url);
     if (!url) continue;
 
     const title = normalizeText(item.title ?? "");

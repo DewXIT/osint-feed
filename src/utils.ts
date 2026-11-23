@@ -68,9 +68,11 @@ export class ThrottleQueue {
 }
 
 export const resolveUrl = (href: string, base: string): string => {
+  if (!href.trim()) return "";
   try {
-    return new URL(href, base).href;
+    const url = new URL(href, base);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
   } catch {
-    return href;
+    return "";
   }
 };

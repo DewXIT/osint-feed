@@ -33,6 +33,33 @@ const html = `
 `;
 
 describe("parseHtml", () => {
+  it.each([
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    " \tjavascript:alert(1)\n",
+    "java&#x09;script:alert(1)",
+    "&#106;avascript&#58;alert(1)",
+    "javascript&colon;alert(1)",
+    "data:text/html,unsafe",
+    "vbscript:msgbox(1)",
+    "file:///etc/passwd",
+    "https://[invalid",
+    "",
+  ])("skips unsafe links decoded from HTML: %j", (href) => {
+    const input = `<article><h2><a href="${href}">Unsafe</a></h2></article>${html}`;
+    const articles = parseHtml(input, source, new Date(), 1);
+    expect(articles).toHaveLength(1);
+    expect(articles[0]!.url).toBe("https://example.com/story-1");
+  });
+
+  it("accepts HTTP links and decodes URL entities", () => {
+    const articles = parseHtml(
+      '<article><h2><a href="http://other.com/story?a=1&amp;b=2">HTTP</a></h2></article>',
+      source,
+    );
+    expect(articles[0]!.url).toBe("http://other.com/story?a=1&b=2");
+  });
+
   it("parses normalized article data", () => {
     const articles = parseHtml(html, source, new Date("2026-03-25T13:00:00Z"));
 

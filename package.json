@@ -1,6 +1,6 @@
 {
   "name": "osint-feed",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Config-driven news harvester for OSINT. RSS + HTML scraping with built-in dedup and LLM-ready digest.",
   "type": "module",
   "main": "./dist/index.js",
