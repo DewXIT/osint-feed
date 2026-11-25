@@ -59,7 +59,14 @@ const buildIndex = <Key extends string>(dictionary: Record<Key, readonly string[
 const regionIndex = buildIndex(REGION_WORDS);
 const topicIndex = buildIndex(TOPIC_WORDS);
 
-const regionTokens = (text: string): string[] => words(text.replace(/\b(?:US|U\.S\.)(?!\p{L})/gu, "united states"));
+// Regions come only from the article text. The upper-case Polish ministry acronym names Poland.
+// Media brands such as "FRANCE 24's correspondent" are not places.
+const regionTokens = (text: string): string[] => words(text
+  .replace(/\b(?:France ?24|Deutsche Welle|Radio Free Europe(?:\/Radio Liberty)?|Euronews|Euractiv|Politico Europe|European Pravda)\b/giu, " ")
+  .replace(/\bMON\b(?!\s+\d{1,2}\b)/gu, "ministerstwo obrony narodowej"));
+
+// Diplomacy between a party to the war and another country is security policy.
+const WAR_PARTIES: ReadonlySet<string> = new Set(["RU", "BY", "UA"]);
 
 // Remove ambiguous phrases before counting topic evidence, keeping the surrounding story.
 const topicTokens = (text: string): string[] => words(text
@@ -69,9 +76,9 @@ const topicTokens = (text: string): string[] => words(text
 
 // Civilian subject matter can otherwise inherit an incidental political or military keyword.
 const combatHeadline = /\b(?:air raids?|bomb(?:ed|ing)|(?:army|troops|forces|missiles?|drones?) (?:hit|attack|strike)|(?:russian|ukrainian) (?:attack|strike)s?)\b/iu;
-const civilianHeadline = /\b(?:premier league|football|liga|drug (?:lord|cartel)|tobacco|witness tampering|bank transfers|migrant workers|abortion|extradition|aerobatic|rehearsal ahead of (?:official )?unveiling|(?:union|workers).{0,60}strike)\b/iu;
+const civilianHeadline = /\b(?:premier league|football|liga|collides?|collision|(?:car|road|traffic|bus|minibus) (?:crash|accident)|drug (?:lord|cartel)|tobacco|witness tampering|bank transfers|migrant workers|abortion|extradition|aerobatic|rehearsal ahead of (?:official )?unveiling|(?:union|workers).{0,60}strike)\b/iu;
 const strongSignals = buildIndex({ strong: [
-  "airstrike*", "air strike*", "shelling", "missile*", "drone attack*", "armed forces", "army units",
+  "airstrike*", "air strike*", "shelling", "missile*", "drone attack*", "car bomb*", "armed forces", "army units",
   "air defence", "air defense", "sabotage", "espionage", "cyberattack*", "terroris*", "bomb threat*",
   "ostrzał*", "obrona powietrzna", "обстрел*", "обстріл*", "ракет*", "ракетний удар", "ракетный удар",
 ] });
@@ -142,14 +149,32 @@ export const classifyArticle = (
     topicScore = 0;
   }
   let relevance = (regionScore + topicScore) / 100;
-  if (scope === "world" && (topic === "military" || topic === "security")) {
-    const signals = new Set((["military", "security"] as const).flatMap((key) => [
-      ...(titleTopics.get(key) ?? []),
-      ...(bodyTopics.get(key) ?? []),
-    ]));
-    const qualified = signals.size >= 2 || strongHeadline || scoreMatches(bodyWords, strongSignals).size > 0;
-    relevance = qualified ? Math.round(topicScore * 1.75) / 100 : 0;
+  const signals = new Set((["military", "security"] as const).flatMap((key) => [
+    ...(titleTopics.get(key) ?? []),
+    ...(bodyTopics.get(key) ?? []),
+  ]));
+  const strong = strongHeadline || scoreMatches(bodyWords, strongSignals).size > 0;
+  const securityTopic = topic === "military" || topic === "security";
+  if (scope === "world" && securityTopic) {
+    // Routine world items stay near the world threshold; violence and hybrid threats rank first.
+    const qualified = signals.size >= 2 || strong;
+    relevance = qualified ? Math.round(topicScore * 1.75 + (strong ? 5 : 0)) / 100 : 0;
+  } else if (scope === "region") {
+    // Only security policy counts: no domestic politics or a lone incidental keyword in the body.
+    // Polish defence coverage is the primary input, so body-only evidence is enough there.
+    const polish = matchedRegions.includes("PL");
+    // PL and Baltic words also imply EU, so EU counts as a separate party only without them.
+    const countries = matchedRegions.filter((region) => region !== "EU");
+    const otherEurope = matchedRegions.includes("EU") && !countries.some((region) => region === "PL" || region === "BALTIC");
+    const warDiplomacy = countries.some((region) => WAR_PARTIES.has(region)) && countries.length + Number(otherEurope) >= 2;
+    const headlineSecurity = titleTopics.has("military") || titleTopics.has("security");
+    const qualified = securityTopic
+      ? headlineSecurity || signals.size >= 2 || strong || polish
+      : topic === "politics" && (hasSecurityContext || warDiplomacy);
+    if (!qualified) relevance = Math.min(relevance, 0.6);
+    else if (polish && securityTopic) relevance += 0.05;
   }
+  relevance = Math.round(Math.min(1, relevance) * 100) / 100;
   return {
     lang: detectLanguage(title + " " + lead),
     regions: matchedRegions.length ? matchedRegions : ["OTHER"],

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { enrichArticleText } from "../src/articleText.js";
 import reviewedNoise from "./fixtures/2026-11-25-rejected-review.json";
+import regionReview from "./fixtures/2026-11-25-region-review.json";
 import { classifyArticle, detectLanguage } from "../src/classification.js";
 import { clusterArticles } from "../src/clusters.js";
 import { createHarvester } from "../src/harvester.js";
@@ -25,7 +26,7 @@ describe("article classification", () => {
     ["pl", "Straż Graniczna na granicy z Białorusią", "Funkcjonariusze zatrzymali się po polskiej stronie.", "BY", "security"],
     ["ru", "Военные учения в Калининграде", "Власти заявили, что это было частью учений.", "RU", "military"],
     ["uk", "ЗСУ повідомили про нові події на Харківщині", "Про це йдеться у заяві України після засідання.", "UA", "military"],
-    ["de", "Bundestag berät über neue Gesetze", "Die Regierung in Deutschland wurde von der Opposition kritisiert.", "EU", "politics"],
+    ["de", "Bundestag berät über neue Gesetze", "Die Regierung in Deutschland will mehr Geld für die Bundeswehr, die Opposition kritisiert das.", "EU", "politics"],
     ["en", "Estonia investigates sabotage", "Officials in Tallinn said the investigation was continuing.", "BALTIC", "security"],
   ] as const)("classifies %s text", (lang, title, body, region, topic) => {
     const result = classifyArticle(title, body);
@@ -88,11 +89,69 @@ describe("article classification", () => {
     "Норвегія замовляє нові ракети", "Военные учения в Польше", "Nowe pociski dla Norwegii",
     "First Flight of New Royal Air Force H-47ER Special Ops Chinook",
     "Chief of Defence Intelligence speech at Cambridge Intelligence Seminar: 20 November 2026",
-    ...("UK|Norway|Canada|United States|Portugal|Bulgaria|Croatia|Poland|Estonia|Albania|Austria|Belgium|Cyprus|Czechia|Denmark|Finland|France|Germany|Greece|Hungary|Iceland|Ireland|Italy|Latvia|Lithuania|Luxembourg|Malta|Montenegro|Netherlands|North Macedonia|Romania|Slovakia|Slovenia|Spain|Sweden|Türkiye").split("|").map((country) => country + " defence budget"),
+    ...("UK|Norway|Portugal|Bulgaria|Croatia|Poland|Estonia|Albania|Austria|Belgium|Cyprus|Czechia|Denmark|Finland|France|Germany|Greece|Hungary|Iceland|Ireland|Italy|Latvia|Lithuania|Luxembourg|Malta|Montenegro|Netherlands|North Macedonia|Romania|Slovakia|Slovenia|Spain|Sweden|Türkiye").split("|").map((country) => country + " defence budget"),
   ])("recognizes European and allied coverage: %s", (title) => {
     const article = classifyArticle(title, "");
     expect(article.regions).toContain("EU");
     expect(article.scope).toBe("region");
+  });
+
+  it.each(regionReview)("takes regions from the story, not from the US or a media brand: $title", ({ title, summary }) => {
+    const article = classifyArticle(title, summary ?? "");
+    expect(article.regions).toEqual(["OTHER"]);
+    expect(article.scope).toBe("world");
+  });
+
+  it.each(["Canada", "United States", "US", "U.S.", "American"])("keeps %s outside the regional scope", (country) => {
+    expect(classifyArticle(country + " defence budget", "").regions).toEqual(["OTHER"]);
+  });
+
+  it("ranks routine US aviation below world violence and never as EU", () => {
+    const routine = regionReview.filter(({ title }) => /MV-75|F-35A|B-52/u.test(title))
+      .map(({ title, summary }) => classifyArticle(title, summary ?? ""));
+    expect(routine).toHaveLength(3);
+    const strike = classifyArticle("Israeli air strike kills four people in Gaza", "");
+    for (const article of routine) {
+      expect(article).toMatchObject({ regions: ["OTHER"], scope: "world" });
+      expect(article.relevance).toBeLessThan(strike.relevance);
+    }
+  });
+
+  it.each([
+    ["Piorun 2 coraz bliżej. Prezes PGZ wskazuje datę [KOMENTARZ]", "Prezes Polskiej Grupy Zbrojeniowej przekazał, kiedy w ofercie znajdzie się system przeciwlotniczy Piorun 2."],
+    ["Kosiniak-Kamysz podpisał kontrakt na kolejne K2", ""],
+    ["Homar-K: kolejne wyrzutnie trafią do jednostek", ""],
+    ["Borsuk wjeżdża do produkcji seryjnej", ""],
+    ["WOT ćwiczą z sojusznikami", ""],
+    ["Dowództwo Operacyjne poderwało myśliwce", "Dowództwo Operacyjne RSZ poinformowało o aktywności lotnictwa nad Polską."],
+    ["Zbrojeniówka czeka na decyzję", "Polski przemysł obronny liczy na zamówienia."],
+    ["Abrams i Apache: nowe umowy", "Agencja Uzbrojenia podpisała umowy dla wojska w Polsce."],
+    ["Polish defence industry wins procurement deal", ""],
+    ["Prezes spółki wskazuje datę", "Spółka z grupy PGZ dostarczy Pioruny."],
+    ["Polscy saperzy zdemontują most w Słowenii", ""],
+  ])("keeps Polish defence coverage: %s", (title, body) => {
+    const article = classifyArticle(title, body);
+    expect(article.regions).toContain("PL");
+    expect(["military", "security"]).toContain(article.topic);
+    expect(article.relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it.each([
+    ["Clashing political visions reflect a divided Spain ahead of election", "Sunday’s election could see a far-right party enter the Spanish government for first time."],
+    ["French ex-President Sarkozy and wife Carla Bruni to face trial", "It is the latest case involving Nicolas Sarkozy who became the first French ex-president to go to jail last year."],
+    ["Latvia's new coalition off to a slow start", "The new government in Latvia has yet to agree on its priorities."],
+    ["Domestic violence soars to record high in Germany", "Every three days in Germany, a man kills his wife or ex-partner."],
+    ["Founders of Russian pet store chain killed in Chile after tourist minibus collides with truck", ""],
+  ])("drops domestic politics and incidental keywords: %s", (title, body) => {
+    expect(classifyArticle(title, body).relevance).toBeLessThan(0.65);
+  });
+
+  it("keeps diplomacy with a party to the war", () => {
+    const body = "Hungary's new prime minister met President Zelenskyy in Kyiv.";
+    expect(classifyArticle("Ukraine: Zelenskyy and Hungary's Magyar meet amid thaw in ties", body))
+      .toMatchObject({ topic: "politics", regions: expect.arrayContaining(["UA", "EU"]) });
+    expect(classifyArticle("Ukraine: Zelenskyy and Hungary's Magyar meet amid thaw in ties", body).relevance).toBeGreaterThanOrEqual(0.65);
+    expect(classifyArticle("Latvian president meets Estonian prime minister", "").relevance).toBeLessThan(0.65);
   });
 
   it("removes Notes from Poland fundraising sentences and falls back to the description", () => {
@@ -177,12 +236,12 @@ describe("harvester AI input", () => {
       },
     }).fetchAll();
     expect(await run()).toMatchObject([
-      { scope: "world", regions: ["OTHER"], topic: "military", relevance: 0.67 },
-      { scope: "world", regions: ["OTHER"], topic: "security", relevance: 0.67 },
+      { scope: "world", regions: ["OTHER"], topic: "military", relevance: 0.72 },
+      { scope: "world", regions: ["OTHER"], topic: "security", relevance: 0.72 },
     ]);
     expect(await run(0)).toHaveLength(2);
-    expect(await run(0.67)).toHaveLength(2);
-    expect(await run(0.68)).toHaveLength(0);
+    expect(await run(0.72)).toHaveLength(2);
+    expect(await run(0.73)).toHaveLength(0);
   });
 
   it("groups similar titles from different sources across midnight without grouping older coverage", async () => {
