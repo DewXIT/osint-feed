@@ -76,6 +76,47 @@ describe("article classification", () => {
     expect(article.relevance).toBeGreaterThanOrEqual(0.65);
   });
 
+  it.each([
+    ["GPS jamming disrupts flights over the Baltic", "Finnish and Estonian authorities reported interference originating from Kaliningrad."],
+    ["Zakłócenia GPS nad Bałtykiem. Piloci zgłaszają problemy", "Źródłem zakłóceń ma być obwód królewiecki."],
+    ["Zagłuszanie GPS nad Polską. Problemy samolotów", "Piloci zgłaszają utratę sygnału nad Mazurami."],
+    ["GNSS spoofing reported over Gulf of Finland", "Airlines report navigation interference."],
+    ["Undersea data cable damaged in the Baltic Sea", "Finland and Germany are investigating damage to the C-Lion1 cable."],
+    ["Uszkodzony kabel na dnie Bałtyku. Śledztwo w Finlandii", "Podejrzewany jest statek floty cieni."],
+    ["Balticconnector pipeline damaged, Finland suspects anchor", "Finnish police are investigating the gas pipeline damage."],
+    ["Uszkodzony gazociąg na Bałtyku", "Operator zgłosił spadek ciśnienia."],
+    ["Estonia: power cable to Finland cut", ""],
+    ["Sabotaż infrastruktury krytycznej w Polsce", ""],
+  ])("keeps GNSS interference and damaged Baltic infrastructure as security: %s", (title, body) => {
+    const article = classifyArticle(title, body);
+    expect(article).toMatchObject({ topic: "security", scope: "region" });
+    expect(article.relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it.each([
+    "Riga opens a new cable car over the Daugava", "Estonian pipeline of tech startups keeps growing",
+    "Polish cable TV prices rise", "Kabel do ładowania samochodów w Warszawie",
+  ])("does not treat a bare cable or pipeline as a threat: %s", (title) => {
+    expect(classifyArticle(title, "").relevance).toBeLessThan(0.65);
+  });
+
+  it.each([
+    ["Two women injured as Russian drone hits homes in Chernihiv Region", "A Russian drone strike damaged homes in the town of Snovsk, Chernihiv Region."],
+    ["Russian strike on Zhytomyr kills two", ""], ["Russian attack on Dnipropetrovsk region injures five", ""],
+    ["Russian drones hit Bila Tserkva", ""], ["Russian drone attack on Kryvyi Rih", ""], ["Russian strikes on Poltava", ""],
+    ["Russian missiles hit Kharkiv", ""], ["Russian drones attack Odesa port", ""], ["Shelling in Zaporizhzhia", ""],
+    ["Russian strike on Sumy", ""], ["Russia shelled Kherson overnight", ""], ["Russian forces advance near Pokrovsk in Donetsk region", ""],
+    ["Russian drones hit Lviv", ""], ["Russian missiles target Kyiv", ""], ["Luhansk: Russian troops regroup", ""],
+    ["Rosyjski atak na Charków", ""], ["Ostrzał Zaporoża", ""], ["Rosja uderzyła w Dniepr", ""], ["Atak na Sumy", ""],
+    ["Rosyjskie drony nad Żytomierzem", ""], ["Atak dronów na Odessę", ""], ["Ostrzał Chersonia", ""], ["Rosja atakuje Czernihów", ""],
+    ["Атака на Дніпро", ""], ["Удар по Житомиру", ""], ["Обстріл Сум", "Росія вдарила по Сумщині."], ["Ракетний удар по Полтаві", ""],
+    ["Обстрел Николаевской области", "Российские войска обстреляли Николаев."], ["Удар по Кривому Рогу", ""],
+  ])("tags a strike on a Ukrainian city or oblast as UA: %s", (title, body) => {
+    const article = classifyArticle(title, body);
+    expect(article.regions).toContain("UA");
+    expect(article.relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
   it("distinguishes a repeated weak word from independent or strong world evidence", () => {
     expect(classifyArticle("Japan reviews military plans", "Military plans clarified.").relevance).toBeLessThan(0.65);
     expect(classifyArticle("Drone photos from Japan", "Drones on display").relevance).toBeLessThan(0.65);
@@ -172,6 +213,11 @@ describe("article classification", () => {
     expect(extract(banner, news)).toBe(news);
     expect(extract("<p>Support our independent journalism today.</p><p>" + news + "</p>", null)).toBe(news);
     expect(extract(banner, null)).toBeNull();
+    const adverts = "Why are you now seeing adverts on our website for the first time? Click here to learn more.";
+    expect(extract(adverts + " " + news, null)).toBe(news);
+    expect(extract(adverts + " Keep our news free from paywalls by making a donation to support our work! " + news, null)).toBe(news);
+    expect(extract("<p>Why are you seeing ads on our website?</p><p>Ads help us keep our journalism free.</p><p>" + news + "</p>", null)).toBe(news);
+    expect(extract(adverts, news)).toBe(news);
   });
 
   it("weighs headline matches above the same words in the body", () => {

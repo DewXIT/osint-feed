@@ -83,6 +83,14 @@ const strongSignals = buildIndex({ strong: [
   "ostrzał*", "obrona powietrzna", "обстрел*", "обстріл*", "ракет*", "ракетний удар", "ракетный удар",
 ] });
 
+// A bare cable or pipeline that is damaged on the Baltic is undersea critical infrastructure. Elsewhere,
+// or without damage, the word is not evidence (cable car, a pipeline of projects).
+const seaInfrastructure = buildIndex({ security: [
+  "cable", "cables", "pipeline", "pipelines", "kabel", "kabla", "kable", "kabli", "kablem", "kablu", "rurociąg*",
+  "кабель", "кабеля", "кабелю", "кабелі", "кабели", "трубопровод*", "трубопровід*",
+] });
+const infrastructureDamage = /\b(?:damag\p{L}*|severed|cut|ruptur\p{L}*|leak\p{L}*|anchor\p{L}*|outage|uszkodz\p{L}*|przerwan\p{L}*|zerwan\p{L}*|kotwic\p{L}*|wyciek\p{L}*|awari\p{L}*)\b|повре[жд]\p{L}*|пошкодж\p{L}*|обрыв\p{L}*|якор\p{L}*/iu;
+
 const scoreMatches = <Key extends string>(
   tokens: readonly string[],
   index: KeywordIndex<Key>,
@@ -130,6 +138,12 @@ export const classifyArticle = (
   const bodyWords = topicTokens(lead);
   const titleTopics = scoreMatches(headline, topicIndex);
   const bodyTopics = scoreMatches(bodyWords, topicIndex);
+  if (matchedRegions.includes("BALTIC") && infrastructureDamage.test(title + " " + lead)) {
+    for (const [tokens, topics] of [[headline, titleTopics], [bodyWords, bodyTopics]] as const) {
+      const infrastructure = scoreMatches(tokens, seaInfrastructure).get("security");
+      if (infrastructure) topics.set("security", new Set([...(topics.get("security") ?? []), ...infrastructure]));
+    }
+  }
   let topic: ArticleTopic = "other";
   let topicScore = 0;
   for (const candidate of ["military", "security", "politics"] as const) {
