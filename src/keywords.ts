@@ -61,6 +61,7 @@ export const REGION_WORDS: Record<Exclude<ArticleRegion, "OTHER">, readonly stri
     "bakhmut*", "bachmut*", "бахмут*", "avdiivk*", "awdijiwk*", "авдіївк*", "авдеевк*", "kupiansk*", "kupiańsk*", "куп янськ*", "купянск*",
     "kostiantynivk*", "kostiantyniwk*", "костянтинівк*", "huliaipol*", "hulajpol*", "гуляйпол*", "mariupol*", "мариупол*", "маріупол*",
     "melitopol*", "мелітопол*", "мелитопол*", "berdiansk*", "бердянськ*", "бердянск*", "kremenchuk*", "krzemieńczuk*", "кременчук*",
+    "volyn*", "wołyń", "wołynia", "wołyniu", "wołyński*", "волин*", "волын*", "zakarpatt*", "zakarpaci*", "закарпат*", "kirovohrad*", "кіровоград*", "кировоград*", "korosten*", "korosteń", "коростен*",
     "charkiw", "lwiw", "dnipropetrowsk",
   ],
   EU: [
