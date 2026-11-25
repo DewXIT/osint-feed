@@ -76,7 +76,7 @@ const topicTokens = (text: string): string[] => words(text
 
 // Civilian subject matter can otherwise inherit an incidental political or military keyword.
 const combatHeadline = /\b(?:air raids?|bomb(?:ed|ing)|(?:army|troops|forces|missiles?|drones?) (?:hit|attack|strike)|(?:russian|ukrainian) (?:attack|strike)s?)\b/iu;
-const civilianHeadline = /\b(?:premier league|football|liga|collides?|collision|(?:car|road|traffic|bus|minibus) (?:crash|accident)|drug (?:lord|cartel)|tobacco|witness tampering|bank transfers|migrant workers|abortion|extradition|aerobatic|rehearsal ahead of (?:official )?unveiling|(?:union|workers).{0,60}strike)\b/iu;
+const civilianHeadline = /\b(?:premier league|football|liga|wwii|ww2|world war (?:ii|two|2)|second world war|dam busters|call for (?:experts|proposals|applications)|collides?|collision|(?:car|road|traffic|bus|minibus) (?:crash|accident)|drug (?:lord|cartel)|tobacco|witness tampering|bank transfers|migrant workers|abortion|extradition|aerobatic|rehearsal ahead of (?:official )?unveiling|(?:union|workers).{0,60}strike)\b/iu;
 const strongSignals = buildIndex({ strong: [
   "airstrike*", "air strike*", "shelling", "missile*", "drone attack*", "car bomb*", "armed forces", "army units",
   "air defence", "air defense", "sabotage", "espionage", "cyberattack*", "terroris*", "bomb threat*",

@@ -142,6 +142,9 @@ describe("article classification", () => {
     ["Latvia's new coalition off to a slow start", "The new government in Latvia has yet to agree on its priorities."],
     ["Domestic violence soars to record high in Germany", "Every three days in Germany, a man kills his wife or ex-partner."],
     ["Founders of Russian pet store chain killed in Chile after tourist minibus collides with truck", ""],
+    ["A Look At The Dam Busters And Their Incredible Bouncing Bombs", "Barnes Wallis’s design offered the RAF a weapon to destroy German dams."],
+    ["Bomb squad prepares to destroy 250-kg WWII German explosive found in Pärnu County", "Estonian Defense Forces' training area."],
+    ["European Defence Standardisation - Call for experts 2027", ""],
   ])("drops domestic politics and incidental keywords: %s", (title, body) => {
     expect(classifyArticle(title, body).relevance).toBeLessThan(0.65);
   });
