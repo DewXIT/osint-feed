@@ -1,8 +1,9 @@
 import RssParser from "rss-parser";
 import type { Article, HarvesterWarning, RssSourceConfig } from "./types.js";
 import { hashUrl, normalizeText, resolveUrl } from "./utils.js";
+import { enrichArticleText } from "./articleText.js";
 
-const DEFAULT_UA = "osint-feed/0.1 (+https://github.com/osint-feed)";
+const DEFAULT_UA = "osint-feed/0.2 (+https://github.com/osint-feed)";
 
 const createRssParser = (): RssParser => new RssParser();
 
@@ -97,9 +98,7 @@ const feedToArticles = (
       ?? item.content
       ?? null;
 
-    const summary = item.contentSnippet
-      ?? item.summary
-      ?? null;
+    const summary = item.summary ?? item.contentSnippet ?? null;
 
     let publishedAt: Date | null = null;
     if (item.isoDate) {
@@ -115,7 +114,13 @@ const feedToArticles = (
       url,
       title,
       content: typeof content === "string" ? normalizeText(content) : null,
-      summary: typeof summary === "string" ? normalizeText(summary) : null,
+      ...enrichArticleText(
+        title,
+        typeof content === "string" ? content : null,
+        typeof summary === "string" ? summary : null,
+        source.name,
+      ),
+      clusterId: null,
       publishedAt,
       hash: hashUrl(url),
       fetchedAt,

@@ -3,6 +3,11 @@ import { dedup, buildDigest } from "../src/digest.js";
 import type { Article } from "../src/types.js";
 
 const makeArticle = (overrides: Partial<Article> = {}): Article => ({
+  lang: "en",
+  regions: ["OTHER"],
+  topic: "other",
+  relevance: 0,
+  clusterId: null,
   sourceId: "test-source",
   url: `https://example.com/${Math.random()}`,
   title: "Default Title",

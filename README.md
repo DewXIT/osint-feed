@@ -4,7 +4,7 @@ Config-driven news harvester for Node.js. Pulls articles from RSS feeds and HTML
 
 No AI inside. No opinions about your stack. Just articles in, structured data out.
 
-Use RSS when you have it. Use HTML selectors when you do not. Filtering for your specific topic belongs in the app that consumes this library.
+Use RSS when you have it, or HTML selectors for sites without feeds. Version 0.2.0 adds offline language detection, regional and topical classification, short extractive summaries, and cross-source event clusters.
 
 ## Why
 
@@ -117,13 +117,14 @@ Creates a harvester instance. Options:
 | `requestTimeout` | `number` | `15000` | HTTP timeout in ms |
 | `requestGap` | `number` | `1000` | Minimum ms between requests (rate limiting) |
 | `maxItemsPerSource` | `number` | `50` | Cap articles returned from one source |
+| `minRelevance` | `number` | `0` | Reject articles below a score from 0 to 1. A source can override this setting with its own `minRelevance`. |
 | `fetch` | `Function` | global fetch | Custom fetch for proxies/testing |
 | `onError` | `Function` | — | Callback for per-source fetch or parse errors |
 | `onWarning` | `Function` | — | Callback for non-fatal source diagnostics |
 
 ### `harvester.fetchAll()`
 
-Fetches all enabled sources. Returns `Article[]`.
+Fetches all enabled sources. Returns `Article[]` with event cluster IDs. Related titles from different sources share a cluster ID when they fall within 24 hours. Singletons use their article hash as the ID.
 
 If one source fails, the method still returns articles from the remaining sources and reports the problem through `onError` when provided.
 
@@ -190,13 +191,22 @@ interface Article {
   url: string;               // canonical article URL, always http(s); items with other schemes are skipped
   title: string;
   content: string | null;    // full text (when available)
-  summary: string | null;    // short description
+  summary: string | null;    // first 1–3 clean sentences, up to 400 characters
   publishedAt: Date | null;
   hash: string;              // SHA-256 of URL (dedup key)
   fetchedAt: Date;
   tags: string[];            // inherited from source
+  lang: string | null;       // ISO 639-1 when detected
+  regions: ArticleRegion[];  // PL, BALTIC, RU, BY, UA, EU or OTHER
+  topic: ArticleTopic;       // military, security, politics or other
+  relevance: number;         // heuristic score from 0 to 1
+  clusterId: string | null;  // assigned by the harvester or clusterArticles()
 }
 ```
+
+Classification checks headlines and up to 2,000 characters of body text with keywords in English, Polish, Russian, Ukrainian and German. Headline matches carry more weight. `EU` covers the wider European context. Relevance combines regional and topical evidence. Sparse input may leave `lang` unset, and an overlong opening sentence becomes an excerpt. The original text field and URL hashes keep their existing behavior.
+
+`clusterArticles(articles, previous?)` can link a new batch to previously saved metadata. It compares titles by Jaccard similarity with a threshold of 0.6 and uses publication time, falling back to fetch time. Headlines in different languages rarely match. The digest still compresses similar articles to its token budget.
 
 ## Dedup Across Sessions
 
@@ -224,6 +234,7 @@ Use `onError` and `onWarning` if you want visibility into partial failures or we
 
 - `onError` covers hard failures like timeouts, HTTP errors, and parsing failures.
 - `onWarning` covers non-fatal issues like empty source results, missing publication dates, or per-source truncation.
+- `below-min-relevance` warnings include `details.rejected` and the threshold used for that source.
 
 This matches the typical small-library OSS pattern: easy defaults, optional hooks for logging and monitoring.
 
@@ -232,7 +243,7 @@ This matches the typical small-library OSS pattern: easy defaults, optional hook
 - RSS and HTML are first-class source types.
 - HTML works best when you can define stable list selectors.
 - The library does not execute page JavaScript or run a headless browser.
-- The library does not decide what is relevant for your domain; apply your own filters downstream.
+- The included relevance rules target European security and politics. Keep the default threshold of zero to harvest all topics.
 
 ## Use with Next.js
 

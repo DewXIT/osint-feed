@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
 import type { Article, HarvesterWarning, HtmlSourceConfig } from "./types.js";
 import { hashUrl, normalizeText, resolveUrl } from "./utils.js";
+import { enrichArticleText } from "./articleText.js";
 
 /**
  * Many government / military sites block non-browser user agents, so we default
@@ -63,7 +64,7 @@ export const parseHtml = (
     if (!url) return;
     const publishedAt = parsePublishedAt($el, selectors.date);
     const summary = selectors.summary
-      ? normalizeText($el.find(selectors.summary).first().text()) || null
+      ? $el.find(selectors.summary).first().html()
       : null;
 
     articles.push({
@@ -71,7 +72,8 @@ export const parseHtml = (
       url,
       title,
       content: null,
-      summary,
+      ...enrichArticleText(title, null, summary, source.name),
+      clusterId: null,
       publishedAt,
       hash: hashUrl(url),
       fetchedAt,

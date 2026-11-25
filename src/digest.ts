@@ -89,7 +89,7 @@ const truncateArticles = (
   articles.map((a) => ({
     ...a,
     content: a.content ? truncate(a.content, maxContentLength) : null,
-    summary: a.summary ? truncate(a.summary, maxContentLength) : null,
+    summary: a.summary ? truncate(a.summary, Math.min(maxContentLength, 400)).slice(0, 400) : null,
   }));
 
 /**

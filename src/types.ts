@@ -8,6 +8,8 @@ export interface RssSourceConfig {
   readonly interval?: number;
   /** Whether this source is active. Defaults to true. */
   readonly enabled?: boolean;
+  /** Overrides the harvester relevance threshold for this source. */
+  readonly minRelevance?: number;
 }
 
 export interface HtmlSelectors {
@@ -34,6 +36,8 @@ export interface HtmlSourceConfig {
   readonly interval?: number;
   /** Whether this source is active. Defaults to true. */
   readonly enabled?: boolean;
+  /** Overrides the harvester relevance threshold for this source. */
+  readonly minRelevance?: number;
 }
 
 export type SourceConfig = RssSourceConfig | HtmlSourceConfig;
@@ -42,6 +46,7 @@ export type HarvesterWarningCode =
   | "empty-html-result"
   | "empty-rss-result"
   | "missing-published-at"
+  | "below-min-relevance"
   | "truncated-source";
 
 export interface HarvesterWarning {
@@ -49,6 +54,10 @@ export interface HarvesterWarning {
   readonly message: string;
   readonly details?: Readonly<Record<string, string | number | boolean>>;
 }
+
+export type ArticleLanguage = "en" | "pl" | "ru" | "uk" | "de" | "fr" | "es" | "be";
+export type ArticleRegion = "PL" | "BALTIC" | "RU" | "BY" | "UA" | "EU" | "OTHER";
+export type ArticleTopic = "military" | "security" | "politics" | "other";
 
 export interface Article {
   readonly sourceId: string;
@@ -61,6 +70,11 @@ export interface Article {
   readonly hash: string;
   readonly fetchedAt: Date;
   readonly tags: readonly string[];
+  readonly lang: ArticleLanguage | null;
+  readonly regions: readonly ArticleRegion[];
+  readonly topic: ArticleTopic;
+  readonly relevance: number;
+  readonly clusterId: string | null;
 }
 
 export interface DigestOptions {
@@ -112,6 +126,8 @@ export interface HarvesterOptions {
   readonly requestGap?: number;
   /** Maximum number of articles returned per source. Defaults to 50. */
   readonly maxItemsPerSource?: number;
+  /** Minimum relevance (0–1). Defaults to 0. A source can override it. */
+  readonly minRelevance?: number;
   /**
    * Custom fetch function. Defaults to global fetch.
    * Useful for testing or proxying.
