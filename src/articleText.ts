@@ -6,6 +6,7 @@ import { normalizeText } from "./utils.js";
 const MAX_SUMMARY_LENGTH = 400;
 const BOILERPLATE = /^(?:read more|related (?:articles|stories)|also read|continue reading|subscribe|czytaj (?:więcej|także|również)|zobacz także|weiterlesen|mehr dazu|читать далее|читайте также|читати далі|читайте також)(?:$|[.!…:\s])/iu;
 const TRAILING_BOILERPLATE = /\s+(?:Read more|Continue reading|Czytaj więcej|Weiterlesen|Читать далее|Читати далі)(?:\s*(?:[.:…»→]|$))/iu;
+const FUNDRAISING = /^(?:keep our (?:news|journalism) free (?:from paywalls|for everyone)|notes from poland is run by a small editorial team|we cannot do what we do without your support|(?:please )?(?:make a donation|donate (?:now|today)|support our (?:independent )?(?:work|journalism))\b)/iu;
 const SENTENCES = new Intl.Segmenter(undefined, { granularity: "sentence" });
 const BREAKS = /<\/(?:p|div|li|h[1-6])\s*>|<br\s*\/?>/gi;
 
@@ -23,6 +24,8 @@ const articleBody = (raw: string, sourceName: string): string => {
     const sourcePrefix = line.match(/^(.+?)\s*[:|–—]\s+/u);
     return sourcePrefix && label(sourcePrefix[1]!) === source ? line.slice(sourcePrefix[0].length) : line;
   }).filter((line) => line && label(line) !== source && !BOILERPLATE.test(line))
+    .flatMap((line) => Array.from(SENTENCES.segment(line), ({ segment }) => segment.trim()))
+    .filter((sentence) => !FUNDRAISING.test(sentence))
     .join(" ").split(TRAILING_BOILERPLATE, 1)[0] ?? "";
 };
 

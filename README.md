@@ -206,7 +206,7 @@ interface Article {
 }
 ```
 
-Classification checks headlines and up to 2,000 characters of body text with keywords in English, Polish, Russian, Ukrainian and German. Headline matches carry more weight. `EU` covers the wider European context. Regional relevance combines geographic and topical evidence. World scores for military and security use topical evidence on its own scale. Set `world: {}` to enable topic and threshold checks for world articles or set `world: { minRelevance: 0.7 }` to choose a separate threshold. With this policy enabled, source overrides apply to regional articles. Sparse input may leave `lang` unset, and an overlong opening sentence becomes an excerpt.
+Classification checks headlines and up to 2,000 characters of body text with keywords in English, Polish, Russian, Ukrainian and German. Headline matches carry more weight. `EU` covers the wider European context. Regional relevance combines geographic and topical evidence. World military and security coverage needs two distinct thematic signals across the headline and lead, or one strong signal such as shelling or sabotage. The EU region includes the UK and other NATO or EU members. Set `world: {}` to enable topic and threshold checks for world articles or set `world: { minRelevance: 0.7 }` to choose a separate threshold. With this policy enabled, source overrides apply to regional articles. Sparse input may leave `lang` unset, and an overlong opening sentence becomes an excerpt.
 
 `clusterArticles(articles, previous?)` can link a new batch to previously saved metadata. It compares normalized headline terms with common words removed. A pair can match at 0.60 title similarity, or at 0.34 with at least four shared words and 0.28 similarity supported by a summary. A new article must match each member. Clustering uses publication time, falling back to fetch time. Headlines in different languages rarely match.
 
@@ -236,6 +236,7 @@ Use `onError` and `onWarning` if you want visibility into partial failures or we
 
 - `onError` covers hard failures like timeouts, HTTP errors, and parsing failures.
 - `onWarning` covers non-fatal issues like empty source results, missing publication dates, or per-source truncation.
+- `onRejected(article, reason, threshold)` exposes individual policy exclusions for quality audits.
 - `below-min-relevance` warnings include `details.rejected`, the source threshold and, when enabled, the world threshold. The count includes world articles outside the eligible topics.
 
 This matches the typical small-library OSS pattern: easy defaults, optional hooks for logging and monitoring.

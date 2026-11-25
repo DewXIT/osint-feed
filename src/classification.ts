@@ -59,25 +59,47 @@ const buildIndex = <Key extends string>(dictionary: Record<Key, readonly string[
 const regionIndex = buildIndex(REGION_WORDS);
 const topicIndex = buildIndex(TOPIC_WORDS);
 
+const regionTokens = (text: string): string[] => words(text.replace(/\b(?:US|U\.S\.)(?!\p{L})/gu, "united states"));
+
+// Remove ambiguous phrases before counting topic evidence, keeping the surrounding story.
+const topicTokens = (text: string): string[] => words(text
+  .replace(/\bMON\b(?!\s+\d{1,2}\b)/gu, "ministerstwo obrony")
+  .replace(/\b(?:think[ -]tanks?|social security|premier league|military gear (?:store|retailer)|second front)\b/giu, " ")
+  .replace(/за кордон[\p{L}]*/giu, " "));
+
+// Civilian subject matter can otherwise inherit an incidental political or military keyword.
+const combatHeadline = /\b(?:air raids?|bomb(?:ed|ing)|(?:army|troops|forces|missiles?|drones?) (?:hit|attack|strike)|(?:russian|ukrainian) (?:attack|strike)s?)\b/iu;
+const civilianHeadline = /\b(?:premier league|football|liga|drug (?:lord|cartel)|tobacco|witness tampering|bank transfers|migrant workers|abortion|extradition|aerobatic|rehearsal ahead of (?:official )?unveiling|(?:union|workers).{0,60}strike)\b/iu;
+const strongSignals = buildIndex({ strong: [
+  "airstrike*", "air strike*", "shelling", "missile*", "drone attack*", "armed forces", "army units",
+  "air defence", "air defense", "sabotage", "espionage", "cyberattack*", "terroris*", "bomb threat*",
+  "ostrzał*", "obrona powietrzna", "обстрел*", "обстріл*", "ракет*", "ракетний удар", "ракетный удар",
+] });
+
 const scoreMatches = <Key extends string>(
   tokens: readonly string[],
   index: KeywordIndex<Key>,
-): Map<Key, number> => {
+): Map<Key, Set<string>> => {
   const matches = new Map<Key, Set<string>>();
   tokens.forEach((word, offset) => {
     const entries = [...(index.get(" " + word) ?? []), ...(index.get(word.slice(0, 3)) ?? [])];
+    const stems = new Map<Key, string>();
     for (const { key, phrase, prefix } of entries) {
       if (!phrase.every((part, i) => {
         const token = tokens[offset + i];
         return prefix && i === phrase.length - 1 ? token?.startsWith(part) : token === part;
       })) continue;
+      // One token can match multiple languages or overlapping singular and prefix entries.
+      const stem = phrase[0]!;
+      if (stem.length < (stems.get(key)?.length ?? Infinity)) stems.set(key, stem);
+    }
+    for (const [key, stem] of stems) {
       const evidence = matches.get(key) ?? new Set<string>();
-      // Count an occurrence once even when several overlapping terms match.
-      evidence.add(word);
+      evidence.add(stem.replace(/^(strike|tank)s$/u, "$1").replace(/^kill(?:s|ed|ing)$/u, "kill"));
       matches.set(key, evidence);
     }
   });
-  return new Map([...matches].map(([key, evidence]) => [key, evidence.size]));
+  return matches;
 };
 
 const scoreEvidence = (title: number, body: number): number =>
@@ -88,31 +110,46 @@ export const classifyArticle = (
   body: string,
 ): Pick<Article, "lang" | "regions" | "scope" | "topic" | "relevance"> => {
   const lead = body.slice(0, 2_000);
-  const titleTokens = words(title);
-  const bodyTokens = words(lead);
+  const titleTokens = regionTokens(title);
+  const bodyTokens = regionTokens(lead);
   const titleRegions = scoreMatches(titleTokens, regionIndex);
   const bodyRegions = scoreMatches(bodyTokens, regionIndex);
   const matchedRegions = [...new Set([...titleRegions.keys(), ...bodyRegions.keys()])];
+  if (matchedRegions.includes("PL") && !matchedRegions.includes("EU")) matchedRegions.push("EU");
   const regionScore = Math.max(0, ...matchedRegions
-    .map((region) => scoreEvidence(titleRegions.get(region) ?? 0, bodyRegions.get(region) ?? 0)));
+    .map((region) => scoreEvidence(titleRegions.get(region)?.size ?? 0, bodyRegions.get(region)?.size ?? 0)));
 
-  const titleTopics = scoreMatches(titleTokens, topicIndex);
-  const bodyTopics = scoreMatches(bodyTokens, topicIndex);
+  const headline = topicTokens(title);
+  const bodyWords = topicTokens(lead);
+  const titleTopics = scoreMatches(headline, topicIndex);
+  const bodyTopics = scoreMatches(bodyWords, topicIndex);
   let topic: ArticleTopic = "other";
   let topicScore = 0;
   for (const candidate of ["military", "security", "politics"] as const) {
-    const score = scoreEvidence(titleTopics.get(candidate) ?? 0, bodyTopics.get(candidate) ?? 0);
+    const score = scoreEvidence(titleTopics.get(candidate)?.size ?? 0, bodyTopics.get(candidate)?.size ?? 0);
     if (score > topicScore) {
       topic = candidate;
       topicScore = score;
     }
   }
   const scope = matchedRegions.length > 0 ? "region" : "world";
-  // World military and security stories use thematic evidence in place of regional evidence.
-  // A headline match scores 0.67, while a body-only match needs several distinct signals to reach 0.65.
-  const relevance = scope === "world" && (topic === "military" || topic === "security")
-    ? Math.round(topicScore * 1.75) / 100
-    : (regionScore + topicScore) / 100;
+  const strongHeadline = scoreMatches(headline, strongSignals).size > 0;
+  const ambiguousHeadline = /\b(?:think[ -]tank|social security)\b|за кордон/iu.test(title);
+  const hasSecurityContext = titleTopics.has("military") || titleTopics.has("security") ||
+    bodyTopics.has("military") || bodyTopics.has("security");
+  if ((civilianHeadline.test(title) && !strongHeadline && !combatHeadline.test(title)) || (ambiguousHeadline && !hasSecurityContext)) {
+    topic = "other";
+    topicScore = 0;
+  }
+  let relevance = (regionScore + topicScore) / 100;
+  if (scope === "world" && (topic === "military" || topic === "security")) {
+    const signals = new Set((["military", "security"] as const).flatMap((key) => [
+      ...(titleTopics.get(key) ?? []),
+      ...(bodyTopics.get(key) ?? []),
+    ]));
+    const qualified = signals.size >= 2 || strongHeadline || scoreMatches(bodyWords, strongSignals).size > 0;
+    relevance = qualified ? Math.round(topicScore * 1.75) / 100 : 0;
+  }
   return {
     lang: detectLanguage(title + " " + lead),
     regions: matchedRegions.length ? matchedRegions : ["OTHER"],

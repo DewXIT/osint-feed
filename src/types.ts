@@ -139,6 +139,8 @@ export interface HarvesterOptions {
   readonly fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
   /** Optional callback for per-source fetch or parse failures. */
   readonly onError?: (error: unknown, source: SourceConfig) => void;
+  /** Observe articles excluded by the relevance policy before deduplication. */
+  readonly onRejected?: (article: Article, reason: "world-topic" | "world-evidence" | "below-threshold", threshold: number) => void;
   /** Optional callback for non-fatal source diagnostics. */
   readonly onWarning?: (warning: HarvesterWarning, source: SourceConfig) => void;
 }

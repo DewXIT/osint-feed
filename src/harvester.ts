@@ -100,9 +100,23 @@ export const createHarvester = (options: HarvesterOptions): Harvester => {
     };
     const articles = await fetchSource(source, throttle, fetchOptions);
     const threshold = source.minRelevance ?? minRelevance;
-    const accepted = articles.filter((article) => world && article.scope === "world"
-      ? (article.topic === "military" || article.topic === "security") && article.relevance >= minWorldRelevance
-      : article.relevance >= threshold);
+    const accepted = articles.filter((article) => {
+      const worldPolicy = world !== undefined && article.scope === "world";
+      const minimum = worldPolicy ? minWorldRelevance : threshold;
+      if (worldPolicy && article.topic !== "military" && article.topic !== "security") {
+        options.onRejected?.(article, "world-topic", minimum);
+        return false;
+      }
+      if (worldPolicy && article.relevance === 0) {
+        options.onRejected?.(article, "world-evidence", minimum);
+        return false;
+      }
+      if (article.relevance < minimum) {
+        options.onRejected?.(article, "below-threshold", minimum);
+        return false;
+      }
+      return true;
+    });
     const rejected = articles.length - accepted.length;
     if (rejected > 0) {
       warn?.({

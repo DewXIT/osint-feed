@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { enrichArticleText } from "../src/articleText.js";
+import reviewedNoise from "./fixtures/2026-11-25-rejected-review.json";
 import { classifyArticle, detectLanguage } from "../src/classification.js";
 import { clusterArticles } from "../src/clusters.js";
 import { createHarvester } from "../src/harvester.js";
@@ -31,6 +33,79 @@ describe("article classification", () => {
     expect(result.regions).toContain(region);
     expect(result.relevance).toBeGreaterThanOrEqual(0.65);
     expect(result.relevance).toBeLessThanOrEqual(1);
+  });
+
+  it.each([
+    "Russian strikes kill five in Kharkiv", "Russia strikes Zelenskyy's hometown, killing 2",
+    "Russian strike hits football stadium in Ukraine", "Shelling reported in Kherson", "Missile attack on Kyiv", "Drone attack on Odesa",
+    "Ostrzał Charkowa", "Atak na Kijów", "Uderzenie na Charków", "Ukraine launches offensive",
+    "Troops killed on the eastern front in Ukraine", "Ракетный удар по Харькову",
+    "Атака на Киев", "Обстріл Харкова", "Удар по Україні", "Атака на Київ",
+    "MON ogłasza decyzję w Warszawie",
+    "Premiera robota PIAP HUNTeR 2. Agencja Uzbrojenia uruchomiła opcję na Tarantule w Polsce",
+  ])("keeps regional military coverage: %s", (title) => {
+    const result = classifyArticle(title, "");
+    expect(result).toMatchObject({ topic: "military", scope: "region" });
+    expect(result.relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it.each([
+    ...reviewedNoise,
+    ...["Premier League: Arsenal beat Chelsea", "London football league president resigns",
+      "Liga w Warszawie: premier na trybunach", "Think tank report on housing costs",
+      "Social Security payments rise", "Президент поїхав за кордон", "Mon 24 Nov: weather update for Gdansk",
+    ].map((title) => ({ title, summary: "" })),
+  ])("rejects reviewed noise: $title", ({ title, summary }) => {
+    expect(classifyArticle(title, summary).relevance).toBeLessThan(0.65);
+  });
+
+  it.each(["криминал", "кримінальна справа"])("avoids a false Crimea match: %s", (title) => {
+    expect(classifyArticle(title, "").regions).not.toContain("UA");
+  });
+
+  it.each([
+    ["Hundreds of schools in Germany and Denmark receive bomb threats", "security", "EU"],
+    ["Russia charges Moscow military gear retailer with ‘financing extremist activity’", "security", "RU"],
+    ["DR Congo says military aircraft missing as rebels claim to shoot down plane", "military", "OTHER"],
+    ["Poland deepens regional gas cooperation with Hungary", "security", "PL"],
+  ])("keeps the reviewed story on topic: %s", (title, topic, region) => {
+    const article = classifyArticle(title, "");
+    expect(article.topic).toBe(topic);
+    expect(article.regions).toContain(region);
+    expect(article.relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it("distinguishes a repeated weak word from independent or strong world evidence", () => {
+    expect(classifyArticle("Japan reviews military plans", "Military plans clarified.").relevance).toBeLessThan(0.65);
+    expect(classifyArticle("Drone photos from Japan", "Drones on display").relevance).toBeLessThan(0.65);
+    for (const [title, body] of [
+      ["Japan reviews military plans", "The navy confirmed."],
+      ["Shelling in Sudan", ""], ["Think tank reports missile attack", ""],
+    ] as const) expect(classifyArticle(title, body).relevance).toBeGreaterThanOrEqual(0.65);
+  });
+
+  it.each([
+    "Норвегія замовляє нові ракети", "Военные учения в Польше", "Nowe pociski dla Norwegii",
+    "First Flight of New Royal Air Force H-47ER Special Ops Chinook",
+    "Chief of Defence Intelligence speech at Cambridge Intelligence Seminar: 20 November 2026",
+    ...("UK|Norway|Canada|United States|Portugal|Bulgaria|Croatia|Poland|Estonia|Albania|Austria|Belgium|Cyprus|Czechia|Denmark|Finland|France|Germany|Greece|Hungary|Iceland|Ireland|Italy|Latvia|Lithuania|Luxembourg|Malta|Montenegro|Netherlands|North Macedonia|Romania|Slovakia|Slovenia|Spain|Sweden|Türkiye").split("|").map((country) => country + " defence budget"),
+  ])("recognizes European and allied coverage: %s", (title) => {
+    const article = classifyArticle(title, "");
+    expect(article.regions).toContain("EU");
+    expect(article.scope).toBe("region");
+  });
+
+  it("removes Notes from Poland fundraising sentences and falls back to the description", () => {
+    const banner = "Keep our news free from paywalls by making a donation to support our work! " +
+      "Notes from Poland is run by a small editorial team and is published by an independent, non-profit foundation that is funded through donations from our readers. " +
+      "We cannot do what we do without your support.";
+    const news = "Poland signed a defence agreement.";
+    const extract = (body: string, description: string | null) =>
+      enrichArticleText("Defence agreement", body, description, "Notes from Poland").summary;
+    expect(extract(banner + " " + news, null)).toBe(news);
+    expect(extract(banner, news)).toBe(news);
+    expect(extract("<p>Support our independent journalism today.</p><p>" + news + "</p>", null)).toBe(news);
+    expect(extract(banner, null)).toBeNull();
   });
 
   it("weighs headline matches above the same words in the body", () => {
