@@ -43,7 +43,7 @@ export const REGION_WORDS: Record<Exclude<ArticleRegion, "OTHER">, readonly stri
   UA: [
     "ukrain*", "kyiv*", "kiev", "kharkiv*", "odesa", "odessa", "lviv", "donbas*", "donets*", "luhans*", "zaporizh*",
     "kherson*", "mykolai*", "crimea*", "zelensky*", "afu", "armed forces of ukraine",
-    "kijow*", "kijów", "charkow*", "charków", "lwów", "lwow*", "krym*", "chersoń*", "zaporos*", "zełensk*",
+    "ukraiń*", "kijow*", "kijów", "charkow*", "charków", "lwów", "lwow*", "krym*", "chersoń*", "zaporos*", "zełensk*",
     "украин*", "україн*", "киев*", "київ*", "києв*", "харьков*", "харків*", "харков*", "одес*",
     "львов*", "львів*", "донбас*", "донецьк*", "донецк*", "луган*", "запор*", "херсон*", "крим", "криму", "крима", "кримом", "кримськ*", "крым", "крыму", "крыма", "крымом", "крымск*", "зеленськ*", "зеленск*", "зсу", "всу",
     "ukrainisch*", "kiew", "selenskyj", "krim",

@@ -110,7 +110,7 @@ describe("article classification", () => {
     ["Rosyjski atak na Charków", ""], ["Ostrzał Zaporoża", ""], ["Rosja uderzyła w Dniepr", ""], ["Atak na Sumy", ""],
     ["Rosyjskie drony nad Żytomierzem", ""], ["Atak dronów na Odessę", ""], ["Ostrzał Chersonia", ""], ["Rosja atakuje Czernihów", ""],
     ["Атака на Дніпро", ""], ["Удар по Житомиру", ""], ["Обстріл Сум", "Росія вдарила по Сумщині."], ["Ракетний удар по Полтаві", ""],
-    ["Обстрел Николаевской области", "Российские войска обстреляли Николаев."], ["Удар по Кривому Рогу", ""], ["Russian drone attack on Volyn region injures five", ""], ["Atak dronów na Wołyń", ""],
+    ["Обстрел Николаевской области", "Российские войска обстреляли Николаев."], ["Удар по Кривому Рогу", ""], ["Russian drone attack on Volyn region injures five", ""], ["Atak dronów na Wołyń", ""], ["Zniknęła hala rosyjskiej fabryki. Nowe zdjęcie po ukraińskim uderzeniu", ""],
   ])("tags a strike on a Ukrainian city or oblast as UA: %s", (title, body) => {
     const article = classifyArticle(title, body);
     expect(article.regions).toContain("UA");
