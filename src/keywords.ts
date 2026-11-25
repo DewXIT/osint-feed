@@ -53,7 +53,7 @@ export const REGION_WORDS: Record<Exclude<ArticleRegion, "OTHER">, readonly stri
     "poland", "polish", "polsk*", "polsce", "estonia*", "latvia*", "lithuania*",
     "albania*", "austria*", "belgi*", "bulgaria*", "croatia*", "cyprus", "cypriot", "iceland*", "ireland", "irish",
     "luxembourg*", "malta", "maltese", "montenegr*", "north macedonia*", "portug*", "slovenia*", "netherlands", "dutch", "czech*", "slovak*", "spain", "spanish", "italy", "italian", "hungary", "hungarian", "greece", "greek", "balkans",
-    "europ*", "unia europejska", "unii europejskiej", "wschodnia flanka", "wschodniej flanki", "bruksel*", "niemcy", "niemieck*",
+    "europ*", "unia europejska", "unii europejskiej", "wschodnia flanka", "wschodniej flanki", "bruksel*", "niemcy", "niemiec", "niemczech", "niemcom", "niemieck*",
     "england", "scotland", "wales", "northern ireland", "anglii", "szkocji", "wielką brytanię", "wielkiej brytanii", "norwegi*", "norwesk*", 
     "alban*", "austri*", "belgi*", "bułgari*", "chorwac*", "cypr", "cyprze", "dania", "danii", "duńsk*", "holandi*", "hiszpani*",
     "irlandi*", "islandi*", "luksemburg*", "malcie", "czarnogór*", "macedoni*", "portugali*", "słoweni*", "turcj*", "węgr*", "węgier", "włoch*", "grecj*",

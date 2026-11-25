@@ -169,7 +169,7 @@ export const classifyArticle = (
     const warDiplomacy = countries.some((region) => WAR_PARTIES.has(region)) && countries.length + Number(otherEurope) >= 2;
     const headlineSecurity = titleTopics.has("military") || titleTopics.has("security");
     const qualified = securityTopic
-      ? headlineSecurity || signals.size >= 2 || strong || polish
+      ? headlineSecurity || signals.size >= 2 || strong || polish || warDiplomacy
       : topic === "politics" && (hasSecurityContext || warDiplomacy);
     if (!qualified) relevance = Math.min(relevance, 0.6);
     else if (polish && securityTopic) relevance += 0.05;

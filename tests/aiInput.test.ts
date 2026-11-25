@@ -155,6 +155,10 @@ describe("article classification", () => {
       .toMatchObject({ topic: "politics", regions: expect.arrayContaining(["UA", "EU"]) });
     expect(classifyArticle("Ukraine: Zelenskyy and Hungary's Magyar meet amid thaw in ties", body).relevance).toBeGreaterThanOrEqual(0.65);
     expect(classifyArticle("Latvian president meets Estonian prime minister", "").relevance).toBeLessThan(0.65);
+    expect(classifyArticle("Czy Rosja odda Krym? Wadephul o nierealnych żądaniach",
+      "Minister spraw zagranicznych Niemiec wezwał Putina do zakończenia wojny na Ukrainie.").relevance).toBeGreaterThanOrEqual(0.65);
+    expect(classifyArticle("CEOs from sensitive sectors receive briefings on Russia threats",
+      "British officials briefed firms in the defence sector about threats from Russia.").relevance).toBeGreaterThanOrEqual(0.65);
   });
 
   it("removes Notes from Poland fundraising sentences and falls back to the description", () => {
