@@ -69,13 +69,15 @@ export const createHarvester = (options: HarvesterOptions): Harvester => {
     requestGap = 1_000,
     maxItemsPerSource = 50,
     minRelevance = 0,
+    world,
     onError,
     onWarning,
   } = options;
 
   const fetchFn = options.fetch;
   const throttle = new ThrottleQueue(requestGap);
-  for (const threshold of [minRelevance, ...sources.map((source) => source.minRelevance ?? minRelevance)]) {
+  const minWorldRelevance = world?.minRelevance ?? minRelevance;
+  for (const threshold of [minRelevance, minWorldRelevance, ...sources.map((source) => source.minRelevance ?? minRelevance)]) {
     if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
       throw new RangeError("minRelevance must be between 0 and 1");
     }
@@ -98,13 +100,15 @@ export const createHarvester = (options: HarvesterOptions): Harvester => {
     };
     const articles = await fetchSource(source, throttle, fetchOptions);
     const threshold = source.minRelevance ?? minRelevance;
-    const accepted = articles.filter((article) => article.relevance >= threshold);
+    const accepted = articles.filter((article) => world && article.scope === "world"
+      ? (article.topic === "military" || article.topic === "security") && article.relevance >= minWorldRelevance
+      : article.relevance >= threshold);
     const rejected = articles.length - accepted.length;
     if (rejected > 0) {
       warn?.({
         code: "below-min-relevance",
-        message: "Articles fell below the relevance threshold",
-        details: { rejected, minRelevance: threshold },
+        message: "Articles were excluded by the relevance policy",
+        details: { rejected, minRelevance: threshold, ...(world ? { minWorldRelevance } : {}) },
       }, source);
     }
     return accepted;

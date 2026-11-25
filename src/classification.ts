@@ -86,7 +86,7 @@ const scoreEvidence = (title: number, body: number): number =>
 export const classifyArticle = (
   title: string,
   body: string,
-): Pick<Article, "lang" | "regions" | "topic" | "relevance"> => {
+): Pick<Article, "lang" | "regions" | "scope" | "topic" | "relevance"> => {
   const lead = body.slice(0, 2_000);
   const titleTokens = words(title);
   const bodyTokens = words(lead);
@@ -107,10 +107,17 @@ export const classifyArticle = (
       topicScore = score;
     }
   }
+  const scope = matchedRegions.length > 0 ? "region" : "world";
+  // World military and security stories use thematic evidence in place of regional evidence.
+  // A headline match scores 0.67, while a body-only match needs several distinct signals to reach 0.65.
+  const relevance = scope === "world" && (topic === "military" || topic === "security")
+    ? Math.round(topicScore * 1.75) / 100
+    : (regionScore + topicScore) / 100;
   return {
     lang: detectLanguage(title + " " + lead),
     regions: matchedRegions.length ? matchedRegions : ["OTHER"],
     topic,
-    relevance: (regionScore + topicScore) / 100,
+    scope,
+    relevance,
   };
 };

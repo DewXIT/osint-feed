@@ -118,13 +118,14 @@ Creates a harvester instance. Options:
 | `requestGap` | `number` | `1000` | Minimum ms between requests (rate limiting) |
 | `maxItemsPerSource` | `number` | `50` | Cap articles returned from one source |
 | `minRelevance` | `number` | `0` | Reject articles below a score from 0 to 1. A source can override this setting with its own `minRelevance`. |
+| `world` | `{ minRelevance?: number }` | — | Enable the AI-input policy for articles outside target regions. Only `military` and `security` qualify. The world threshold defaults to the harvester's `minRelevance`. |
 | `fetch` | `Function` | global fetch | Custom fetch for proxies/testing |
 | `onError` | `Function` | — | Callback for per-source fetch or parse errors |
 | `onWarning` | `Function` | — | Callback for non-fatal source diagnostics |
 
 ### `harvester.fetchAll()`
 
-Fetches all enabled sources. Returns `Article[]` with event cluster IDs. Related titles from different sources share a cluster ID when they fall within 24 hours. Singletons use their article hash as the ID.
+Fetches all enabled sources. Returns `Article[]` with event cluster IDs. Related coverage from different sources can share a cluster ID when it falls within 24 hours. Singletons use their article hash as the ID.
 
 If one source fails, the method still returns articles from the remaining sources and reports the problem through `onError` when provided.
 
@@ -198,15 +199,16 @@ interface Article {
   tags: string[];            // inherited from source
   lang: string | null;       // ISO 639-1 when detected
   regions: ArticleRegion[];  // PL, BALTIC, RU, BY, UA, EU or OTHER
+  scope: ArticleScope;       // region when a target region is present, otherwise world
   topic: ArticleTopic;       // military, security, politics or other
   relevance: number;         // heuristic score from 0 to 1
   clusterId: string | null;  // assigned by the harvester or clusterArticles()
 }
 ```
 
-Classification checks headlines and up to 2,000 characters of body text with keywords in English, Polish, Russian, Ukrainian and German. Headline matches carry more weight. `EU` covers the wider European context. Relevance combines regional and topical evidence. Sparse input may leave `lang` unset, and an overlong opening sentence becomes an excerpt. The original text field and URL hashes keep their existing behavior.
+Classification checks headlines and up to 2,000 characters of body text with keywords in English, Polish, Russian, Ukrainian and German. Headline matches carry more weight. `EU` covers the wider European context. Regional relevance combines geographic and topical evidence. World scores for military and security use topical evidence on its own scale. Set `world: {}` to enable topic and threshold checks for world articles or set `world: { minRelevance: 0.7 }` to choose a separate threshold. With this policy enabled, source overrides apply to regional articles. Sparse input may leave `lang` unset, and an overlong opening sentence becomes an excerpt.
 
-`clusterArticles(articles, previous?)` can link a new batch to previously saved metadata. It compares titles by Jaccard similarity with a threshold of 0.6 and uses publication time, falling back to fetch time. Headlines in different languages rarely match. The digest still compresses similar articles to its token budget.
+`clusterArticles(articles, previous?)` can link a new batch to previously saved metadata. It compares normalized headline terms with common words removed. A pair can match at 0.60 title similarity, or at 0.34 with at least four shared words and 0.28 similarity supported by a summary. A new article must match each member. Clustering uses publication time, falling back to fetch time. Headlines in different languages rarely match.
 
 ## Dedup Across Sessions
 
@@ -234,7 +236,7 @@ Use `onError` and `onWarning` if you want visibility into partial failures or we
 
 - `onError` covers hard failures like timeouts, HTTP errors, and parsing failures.
 - `onWarning` covers non-fatal issues like empty source results, missing publication dates, or per-source truncation.
-- `below-min-relevance` warnings include `details.rejected` and the threshold used for that source.
+- `below-min-relevance` warnings include `details.rejected`, the source threshold and, when enabled, the world threshold. The count includes world articles outside the eligible topics.
 
 This matches the typical small-library OSS pattern: easy defaults, optional hooks for logging and monitoring.
 

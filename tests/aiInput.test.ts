@@ -27,7 +27,7 @@ describe("article classification", () => {
     ["en", "Estonia investigates sabotage", "Officials in Tallinn said the investigation was continuing.", "BALTIC", "security"],
   ] as const)("classifies %s text", (lang, title, body, region, topic) => {
     const result = classifyArticle(title, body);
-    expect(result).toMatchObject({ lang, topic });
+    expect(result).toMatchObject({ lang, topic, scope: "region" });
     expect(result.regions).toContain(region);
     expect(result.relevance).toBeGreaterThanOrEqual(0.65);
     expect(result.relevance).toBeLessThanOrEqual(1);
@@ -37,7 +37,7 @@ describe("article classification", () => {
     const relevant = "Poland boosts its air defence";
     expect(classifyArticle(relevant, "").relevance).toBeGreaterThan(classifyArticle("Update", relevant).relevance);
     expect(classifyArticle("Nvidia launches a GPU", "The chip has a heat tankard.")).toMatchObject({
-      regions: ["OTHER"], topic: "other", relevance: 0,
+      regions: ["OTHER"], scope: "world", topic: "other", relevance: 0,
     });
     expect(detectLanguage("東京")).toBeNull();
   });
@@ -87,6 +87,27 @@ describe("harvester AI input", () => {
       code: "below-min-relevance", details: { rejected: 1, minRelevance: 0.65 },
     }));
     expect(() => createHarvester({ sources: [source], minRelevance: 1.1 })).toThrow(RangeError);
+  });
+
+  it("applies world topic and score rules independently of a regional source override", async () => {
+    const headlines = ["Japan deploys army units", "Japan investigates sabotage", "Japan calls elections", "Tokyo has a new tram"];
+    const run = (minRelevance?: number) => createHarvester({
+      sources: headlines.map((_, i) => ({ ...source, id: String(i), url: source.url + "/" + i, minRelevance: 0.71 })),
+      minRelevance: 0.65,
+      world: minRelevance === undefined ? {} : { minRelevance },
+      requestGap: 0,
+      fetch: async (input) => {
+        const i = Number(String(input).at(-1));
+        return new Response(feed(headlines[i]!, "", "/article/" + i));
+      },
+    }).fetchAll();
+    expect(await run()).toMatchObject([
+      { scope: "world", regions: ["OTHER"], topic: "military", relevance: 0.67 },
+      { scope: "world", regions: ["OTHER"], topic: "security", relevance: 0.67 },
+    ]);
+    expect(await run(0)).toHaveLength(2);
+    expect(await run(0.67)).toHaveLength(2);
+    expect(await run(0.68)).toHaveLength(0);
   });
 
   it("groups similar titles from different sources across midnight without grouping older coverage", async () => {

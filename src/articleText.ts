@@ -52,7 +52,7 @@ export const enrichArticleText = (
   content: string | null,
   description: string | null,
   sourceName: string,
-): Pick<Article, "lang" | "regions" | "topic" | "relevance" | "summary"> => {
+): Pick<Article, "lang" | "regions" | "scope" | "topic" | "relevance" | "summary"> => {
   const body = articleBody(content ?? "", sourceName) || articleBody(description ?? "", sourceName);
   return { ...classifyArticle(title, body), summary: summarize(body, sourceName) };
 };

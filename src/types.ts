@@ -58,6 +58,7 @@ export interface HarvesterWarning {
 export type ArticleLanguage = "en" | "pl" | "ru" | "uk" | "de" | "fr" | "es" | "be";
 export type ArticleRegion = "PL" | "BALTIC" | "RU" | "BY" | "UA" | "EU" | "OTHER";
 export type ArticleTopic = "military" | "security" | "politics" | "other";
+export type ArticleScope = "region" | "world";
 
 export interface Article {
   readonly sourceId: string;
@@ -72,6 +73,7 @@ export interface Article {
   readonly tags: readonly string[];
   readonly lang: ArticleLanguage | null;
   readonly regions: readonly ArticleRegion[];
+  readonly scope: ArticleScope;
   readonly topic: ArticleTopic;
   readonly relevance: number;
   readonly clusterId: string | null;
@@ -128,6 +130,8 @@ export interface HarvesterOptions {
   readonly maxItemsPerSource?: number;
   /** Minimum relevance (0–1). Defaults to 0. A source can override it. */
   readonly minRelevance?: number;
+  /** Enable AI-input filtering for world articles. Its threshold defaults to minRelevance. */
+  readonly world?: { readonly minRelevance?: number };
   /**
    * Custom fetch function. Defaults to global fetch.
    * Useful for testing or proxying.

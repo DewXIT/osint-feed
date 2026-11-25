@@ -1,0 +1,52 @@
+{
+  "ukAlJazeera": {
+    "title": "UK warns companies of potential Russian sabotage threat",
+    "sourceId": "aljazeera",
+    "summary": "Britain's Defence Ministry and security service warn of the threat in unusual public announcement."
+  },
+  "ukKyivIndependent": {
+    "title": "UK warns companies supplying Ukraine of Russian sabotage threat",
+    "sourceId": "kyiv-independent",
+    "summary": "British officials said Russia had stepped up sabotage attempts against European defense facilities in recent months, often using recruited operatives to carry out arson attacks and other operations aimed at weakening support for Ukraine. The threat also includes espionage, intimidation, and information operations, according to the alert"
+  },
+  "refineriesKyivIndependent": {
+    "title": "Ukrainian drones reportedly strike 2 Russian oil refineries in massive attack",
+    "sourceId": "kyiv-independent",
+    "summary": "Ukrainian forces struck two Russian oil refineries, setting the sites ablaze in a massive attack overnight on Nov. 25, monitoring channels reported."
+  },
+  "refineriesUkrinform": {
+    "title": "Two Rosneft oil refineries in Russia’s Samara region on fire following drone attack – media",
+    "sourceId": "ukrinform",
+    "summary": "A fire broke out at an oil refinery in the city of Syzran, Samara region, Russia, on Wednesday amid a drone attack."
+  },
+  "refineriesMeduza": {
+    "title": "Ukrainian drones strike Russia’s Samara region, killing one and setting two Rosneft oil refineries ablaze",
+    "sourceId": "meduza-en",
+    "summary": "Ukrainian drones attacked Russia’s Samara region, killing one person, Samara Governor Vyacheslav Fedorishchev said. Russian air defense forces shot down more than 145 drones overnight, he said. Residents could see the aftermath “on the ground” for themselves, he added, reminding them that publishing photos and videos is banned."
+  },
+  "warshipBenghazi": {
+    "title": "Libya: 2 dead after Ukrainian attack on Russian warship in Benghazi",
+    "sourceId": "dw",
+    "summary": "The head of the eastern administration in Libya has confirmed that two Libyan soldiers succumbed to their injuries. Ukraine's foreign minister defended the attack as an effort to counter Russian aggression."
+  },
+  "zhytomyr": {
+    "title": "Russian drones attack civilian and energy infrastructure in Zhytomyr region, one person injured",
+    "sourceId": "ukrinform",
+    "summary": "Russian drones targeted civilian and energy infrastructure in the Zhytomyr region, injuring one person."
+  },
+  "dronesOvernight": {
+    "title": "Air defenses down 88 of 112 Russian drones targeting Ukraine overnight",
+    "sourceId": "ukrinform",
+    "summary": "Russian forces attacked Ukraine with 112 attack drones overnight on the night of November 24-25."
+  },
+  "estoniaRail": {
+    "title": "Estonian PM: Closing rail border crossing with Russia could be next step",
+    "sourceId": "err-news",
+    "summary": "Prime Minister Kristen Michal said Estonia's decision to close its land border with Russia is effectively indefinite and designed to withstand legal challenges. The government has not yet decided whether to close the rail border crossing, but Michal said that option could be considered as a future step."
+  },
+  "estoniaLand": {
+    "title": "Russia protests Estonia’s planned land border closure and again accuses it of letting Ukrainian drones use its airspace",
+    "sourceId": "meduza-en",
+    "summary": "Russia’s Foreign Ministry summoned Estonia’s acting chargé d’affaires in Moscow, Marek Juhtegi, and lodged a “strong protest” over Estonia’s accusation that Moscow tried to set fire to a defense plant and the Estonian government’s decision to close the border with Russia."
+  }
+}

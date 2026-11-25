@@ -7,6 +7,7 @@ const makeArticle = (overrides: Partial<Article> = {}): Article => ({
   regions: ["OTHER"],
   topic: "other",
   relevance: 0,
+  scope: "world",
   clusterId: null,
   sourceId: "test-source",
   url: `https://example.com/${Math.random()}`,
